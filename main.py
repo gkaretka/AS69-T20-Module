@@ -4,12 +4,18 @@ import serial
 import sys
 import threading
 import time
+import binascii
 from Crypto import Random
 from Crypto.Cipher import AES
 
 KEY = "KEY"
 PORT = sys.argv[1]
-MSG_END = "\n\n\n\n"
+MSG_END = "\n"
+
+CONFIG = False
+if len(sys.argv) > 2:
+    if sys.argv[2] == "config":
+        CONFIG = True
 
 
 class AESCipher(object):
@@ -43,11 +49,17 @@ class AS69Operator:
     ser = serial.Serial()
 
     def __init__(self):
-        self.set_default_values()
+        self.init()
+
+        if CONFIG:
+            self.get_parameters()
+            self.set_default_parameters()
+            self.get_parameters()
+
         self.print_received()
         self.write_received()
 
-    def set_default_values(self):
+    def init(self):
         self.ser.baudrate = 9600
         self.ser.port = PORT
         self.ser.open()
@@ -56,11 +68,25 @@ class AS69Operator:
         string = self.cypher.encrypt(string)
         self.ser.write(string+MSG_END.encode())
 
+    def set_default_parameters(self):
+        time.sleep(0.5)
+        print("SETTING DEFAULT PARAMETERS")
+        cmd = bytes.fromhex("C01234180043")
+        self.ser.write(cmd)
+        print("STATUS:" + self.ser.read(4).decode())
+        time.sleep(0.5)
+
+    def get_parameters(self):
+        print("CURRENT PARAMETERS")
+        cmd = bytes.fromhex("C1C1C1")
+        self.ser.write(cmd)
+        print(binascii.hexlify(self.ser.read(6)))
+
     def read_packet(self):
         string = ""
         end_counter = 0
 
-        while end_counter < 4:
+        while end_counter < 1:
             helper = self.ser.read_all().decode()
             if helper == '\n':
                 end_counter = end_counter + 1
@@ -94,5 +120,6 @@ class AS69Operator:
 
 operator = AS69Operator()
 
-while True:
-    time.sleep(0.5)
+if not CONFIG:
+    while True:
+        time.sleep(0.5)
