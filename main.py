@@ -39,7 +39,6 @@ class AESCipher(object):
 
 
 class AS69Operator:
-    key = KEY
     cypher = AESCipher(KEY)
     ser = serial.Serial()
 
